@@ -24,7 +24,12 @@ class BHK:
               if numi == 3:
                  self.eta = i
               if numi == 4:
+                 # not used?
                  self.l = i
+              if numi == 5:
+                 # will be used to make the arbitrary
+                 # polynomial kernel
+                 self.kernel = np.zeros(i)
               numi += 1
            self.testd = (pd.read_csv(self.test,sep=',',header=None)).values
            self.traind = (pd.read_csv(self.train,sep=',',header=None)).values
