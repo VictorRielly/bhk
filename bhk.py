@@ -24,7 +24,12 @@ class BHK:
               if numi == 3:
                  self.eta = i
               if numi == 4:
+                 # not used?
                  self.l = i
+              if numi == 5:
+                 # will be used to make the arbitrary
+                 # polynomial kernel
+                 self.kernel = np.zeros(i)
               numi += 1
            self.testd = (pd.read_csv(self.test,sep=',',header=None)).values
            self.traind = (pd.read_csv(self.train,sep=',',header=None)).values
@@ -59,22 +64,22 @@ class BHK:
         # we need to compute K_{-} and K_{+}.
         ###############################################################################################
         # Computes the polynomial kernel of the vector stored in self.vec1 and self.vec2 and stores the 
-        # answer into self.a1
+        # answer into self.a1 (x+c)^n
         def linear_kernel_vec(self,n,c):
            self.a1 = ((np.dot(self.vec1,self.vec1)+c)**n)
-        # Computes the linear kernel of the vector stored in self.vec1 with every vector stored in
+        # Computes the  polynomial kernel of the vector stored in self.vec1 with every vector stored in
         # self.mt1 and stores the resulting vector into self.veca1
         def linear_kernel_mt1(self,n,c):
            self.veca1 = ((np.dot(self.mt1,self.vec1)+c)**n)
-        # Computes the linear kernel of every vector stored in self.mt2 with every vector stored in
+        # Computes the polynomial kernel of every vector stored in self.mt2 with every vector stored in
         # self.mt1 and stores the resulting matrix into self.mta1
         def linear_kernel_mt2(self,n,c):
            self.mta1 = ((np.dot(self.mt1,self.mt2)+c)**n)
-        # Computes the polynomial kernel of the vector stored in self.vec1 and self.vec2 and stores the 
-        # answer into self.a1
+        # Computes the angle kernel of the vector stored in self.vec1 and self.vec2 and stores the 
+        # answer into self.a1. This is the normalized polynomial kernel
         def angle_kernel_vec(self,n,c):
            self.a1 = ((np.dot(self.vec1,self.vec1)+c)**n)/(np.sqrt(((np.dot(self.vec1,self.vec1)+c)**n)*((np.dot(self.vec2,self.vec2)+c)**n)))
-        # Computes the linear kernel of the vector stored in self.vec1 with every vector stored in
+        # Computes the normalized polynomial kernel of the vector stored in self.vec1 with every vector stored in
         # self.mt1 and stores the resulting vector into self.veca1
         def angle_kernel_mt1(self,n,c):
            self.mags = np.zeros(np.shape(self.mt1)[1])
@@ -82,7 +87,7 @@ class BHK:
               self.mags[i] = np.sqrt(((np.dot(self.mt1[i,:],self.mt1[i,:])+c)**n)) 
            self.veca1 = ((np.dot(self.mt1,self.vec1)+c)**n)/(np.sqrt((np.dot(self.vec1,self.vec1) + c)**n))
            self.veca1 = self.veca1/self.mags
-        # Computes the linear kernel of every vector stored in self.mt2 with every vector stored in
+        # Computes the normalized polynomial kernel of every vector stored in self.mt2 with every vector stored in
         # self.mt1 and stores the resulting matrix into self.mta1
         def angle_kernel_mt2(self,n,c):
            self.mta1 = ((np.dot(self.mt1,self.mt2)+c)**n)
@@ -91,7 +96,7 @@ class BHK:
               self.mta1[:,i] = self.mta1[:,i] / np.sqrt((np.dot(self.mt2[:,i],self.mt2[:,i]) + c)**n)
 
         # Computes kplus and kminus 5/6 of the training data will be used to create the alphas and
-        # 1/6th of the data will be used to find lambda. 
+        # 1/6th of the data will be used to find lambda. Also computes the covariance matrix
         def compute_all(self,n,c,m):
            # we want it to concatenate
            self.n = (5*np.shape(self.traindata)[0])/6;
@@ -129,7 +134,7 @@ class BHK:
            print np.shape(self.traintemp[:self.negnum,:])
            print np.shape(self.traintemp[self.negnum:,:])
         # Computes kplus and kminus 5/6 of the training data will be used to create the alphas and
-        # 1/6th of the data will be used to find lambda. 
+        # 1/6th of the data will be used to find lambda. Also computes the covariance matrix 
         def compute_all_angle(self,n,c,m):
            # we want it to concatenate
            self.n = (5*np.shape(self.traindata)[0])/6;
@@ -168,7 +173,7 @@ class BHK:
            print np.shape(self.traintemp[self.negnum:,:])
         
         
-        # Computes kplus and kminus all training
+        # Computes kplus and kminus all training, as well as the covariance matrix
         def compute_all_final(self,n,c,m):
            # we want it to concatenate
            self.n = (np.shape(self.traindata)[0]);
@@ -200,6 +205,7 @@ class BHK:
            print np.shape(self.g)
            print np.shape(self.traintemp[:self.negnum,:])
 
+        # Returns the roc auc score of current alpha vector on training set        
         def verify_alpha(self,n,c,m):    
            self.mt1 = self.traintrain[:-2-m,:]
            self.mt2 = (self.traintrain[:,:]).T
@@ -207,6 +213,7 @@ class BHK:
            self.h = np.dot(self.alpha,self.mta1)	
 	   return sklearn.metrics.roc_auc_score(self.traindata[:self.n,0],self.h)
         
+        # Returns the roc auc score of current alpha vector on training set        
         def evaluate_alpha(self,n,c,m):    
            self.mt1 = self.traintrain[:-2-m,:]
            self.mt2 = (self.traintest[:,:]).T
@@ -214,6 +221,7 @@ class BHK:
            self.h = np.dot(self.alpha,self.mta1)
 	   return sklearn.metrics.roc_auc_score(self.traindata[self.n:,0],self.h)
 
+        # Returns the roc auc score of current alpha vector on test set        
         def test_alpha(self,n,c,m):    
            self.mt1 = self.traintrain[:-2-m,:]
            self.mt2 = (self.testtest[:,:]).T
@@ -221,6 +229,7 @@ class BHK:
            self.h = np.dot(self.alpha,self.mta1)	
 	   return sklearn.metrics.roc_auc_score(self.testdata[:,0],self.h)
         
+        # This is a kernel function I tried that sends all magnitude of vectors to 1
         def verify_alpha_angle(self,n,c,m):    
            self.mt1 = self.traintrain[:-2-m,:]
            self.mt2 = (self.traintrain[:,:]).T
@@ -228,6 +237,7 @@ class BHK:
            self.h = np.dot(self.alpha,self.mta1)	
 	   return sklearn.metrics.roc_auc_score(self.traindata[:self.n,0],self.h)
         
+        # This is a kernel function I tried that sends all magnitude of vectors to 1
         def evaluate_alpha_angle(self,n,c,m):    
            self.mt1 = self.traintrain[:-2-m,:]
            self.mt2 = (self.traintest[:,:]).T
@@ -235,6 +245,7 @@ class BHK:
            self.h = np.dot(self.alpha,self.mta1)
 	   return sklearn.metrics.roc_auc_score(self.traindata[self.n:,0],self.h)
 
+        # This is a kernel function I tried that sends all magnitude of vectors to 1
         def test_alpha_angle(self,n,c,m):    
            self.mt1 = self.traintrain[:-2-m,:]
            self.mt2 = (self.testtest[:,:]).T
@@ -264,13 +275,20 @@ class BHK:
            self.alpha = self.alpha[0] 
            self.new_roc_auc = self.evaluate_alpha(n,c)
            print self.new_roc_auc
-        
+       
+        # This is the default function I have been using to compute the
+        # weight vector of the final classifier.
+        # n is the order of the kernel, c is the constant added to the
+        # kernel (x^n+c), l is the term added to reduce overfitting, m tells
+        # us how many datapoints will be excluded from the kernel but included
+        # in the covariance matrix computations. 
         def compute_alpha7(self,n,c,l,m):
            self.alpha = np.dot(np.linalg.inv(.5*self.g+self.traintemp[:-2-m,:-2-m]*l),(self.kplus - self.kminus))
            self.alpha = self.alpha 
            #self.new_roc_auc = self.evaluate_alpha(n,c)
            #print self.new_roc_auc
         
+        # Finds the accuracy over the training data 
         def accuracy_vector_train(self):
            self.temphy = np.zeros([np.shape(self.traindata[self.n:,0])[0],2])
            self.temphy[:,0] = self.h 
@@ -315,7 +333,7 @@ class BHK:
                  # True negative rate
                  self.accuracy[i][5] = (self.currentp + self.currentn)/(self.totalstuff+0.0) 
         
-
+        # Write function description here. Tests the accuracy over the test data
         def accuracy_vector_test(self):
            self.temphy = np.zeros([np.shape(self.testdata[:,0])[0],2])
            self.temphy[:,0] = self.h 
@@ -359,15 +377,18 @@ class BHK:
                  self.accuracy[i][3] = (self.currentp)/(i + 0.0)
                  # True negative rate
                  self.accuracy[i][5] = (self.currentp + self.currentn)/(self.totalstuff+0.0)
-       
+
+        # What is this function for?       
         def yhat(self,myV,n,c):
            self.mt1 = self.traintrain[:,:]
            self.vec1 = myV[:]
            self.linear_kernel_mt1(n,c)
            self.yhatans = np.dot(self.alpha,self.veca1)
-           return self.yhatans 
-
+           return self.yhatans
+ 
+# This class processes the google stock data
 class ProcGoo:
+        # This constructor needs to be commented
         def __init__(*arg):
            self = arg[0]
            numi = 0
@@ -516,6 +537,7 @@ class ProcGoo:
            self.avenorm = np.sum(self.mags)/np.size(self.mags)
            self.fintrain = self.fintrain/self.avenorm
 
+        # This function needs to be commented
         def save(self,cutoff,which):
            self.trainingpost = np.zeros([np.shape(self.fintrain)[0],np.shape(self.fintrain)[1]+1])
            # ensures the which number is between 0 and numtrends 
@@ -526,7 +548,8 @@ class ProcGoo:
               if (self.fintrain[i+2,-self.numtrends-1+which])*100*self.avenorm > cutoff:
                  self.trainingpost[i][0] = 1
            np.savetxt(str(cutoff)+","+str(which)+".csv",self.trainingpost,delimiter=',')
-        def new_vec(self):
+         # This function needs to be commented
+         def new_vec(self):
            self.new_vec = self.fintrain[-1,:]
            return self.new_vec 
         
@@ -552,6 +575,8 @@ def new_vec():
    myB = ProcGoo("aapl20072017.csv","adbe20072017.csv","amov20072017.csv","amx20072017.csv","amzn20072017.csv","atvi20072017.csv","avx20072017.csv","bac20072017.csv","chl20072017.csv","dis20072017.csv","googl20072017.csv","gsat20072017.csv","ibm20072017.csv","intc20072017.csv","irbt20072017.csv","ko20072017.csv","msft20072017.csv","nke20072017.csv","qcom20072017.csv","sbux20072017.csv","spy20072017.csv","tef20072017.csv","teo20072017.csv","tgt20072017.csv","veon20072017.csv","viv20072017.csv","vod20072017.csv")
    return myB.new_vec()
 
+# Need to comment this
+# This is used on the stock data
 def compute(i):
    myB = BHK("1.0,"+str(i)+".csv","1.0,"+str(i)+".csv")
    tempv = myB.traindata[-2:,:]
