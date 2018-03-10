@@ -385,6 +385,13 @@ class BHK:
            self.linear_kernel_mt1(n,c)
            self.yhatans = np.dot(self.alpha,self.veca1)
            return self.yhatans
+
+# This function tests to ensure that
+# all the functionality is working
+def driver():
+   myB = BHK("../mnist_train_0.csv","../mnist_test_0.csv")
+   print np.shape(myB.traindata) 
+
  
 # This class processes the google stock data
 class ProcGoo:
@@ -548,8 +555,9 @@ class ProcGoo:
               if (self.fintrain[i+2,-self.numtrends-1+which])*100*self.avenorm > cutoff:
                  self.trainingpost[i][0] = 1
            np.savetxt(str(cutoff)+","+str(which)+".csv",self.trainingpost,delimiter=',')
-         # This function needs to be commented
-         def new_vec(self):
+          
+        # This function needs to be commented
+        def new_vec(self):
            self.new_vec = self.fintrain[-1,:]
            return self.new_vec 
         
