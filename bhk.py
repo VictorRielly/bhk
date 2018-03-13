@@ -221,6 +221,40 @@ class BHK:
            self.h = np.dot(self.alpha,self.mta1)
 	   return sklearn.metrics.roc_auc_score(self.traindata[self.n:,0],self.h)
 
+        # This function will scale and center the weight vector so the mean of
+        # the positive class gets sent to 1 and the mean of the negative class
+        # gets sent to -1. The shift constant will be stored in self.shift, and
+        # the weight vector self.alpha will be scaled by a constant to make the
+        # difference in the means equal to 2. This function assumes self.h stores
+        # the h(x) for all x in the train set and self.traindata[self.n:,0] contains
+        # all the class labels for the training set.
+        def center(self):
+           tempPosMean = 0
+           tempNegMean = 0
+           countp = 0
+           countn = 0
+           for i in range(0,np.size(self.h)):
+              if self.traindata[i,0] == 0:
+                 tempNegMean += self.h[i]
+                 countn += 1
+              else :
+                 tempPosMean += self.h[i]
+                 countp += 1
+           tempPosMean *= 1.0/countp 
+           tempNegMean *= 1.0/countn 
+           print tempPosMean
+           print tempNegMean
+           diff = tempPosMean - tempNegMean
+           self.alpha *= (2.0/diff)
+           tempPosMean *= (2.0/diff) 
+           tempNegMean *= (2.0/diff)
+           tempDiff = -1 - tempNegMean
+           tempPosMean += tempDiff
+           tempNegMean += tempDiff
+           print tempPosMean
+           print tempNegMean 
+           self.alpha += tempDiff
+
         # Returns the roc auc score of current alpha vector on test set        
         def test_alpha(self,n,c,m):    
            self.mt1 = self.traintrain[:-2-m,:]
@@ -390,7 +424,28 @@ class BHK:
 # all the functionality is working
 def driver():
    myB = BHK("../mnist_train_0.csv","../mnist_test_0.csv")
-   print np.shape(myB.traindata) 
+   print np.shape(myB.traindata)
+   myB.traindata = myB.traindata[20000:25000,:]
+   myB.compute_all(2,1,1000)
+   myB.compute_alpha7(2,1,0,1000)
+   print myB.verify_alpha(2,1,1000)
+   print myB.test_alpha(2,1,1000) 
+
+# This driver will implement a forest of kernel
+# lda's. It will require a batch size, covariance
+# matix size, and number of trees as parameters.
+# covariance size is b-m and batch size is b
+def driver2(b,m,nt):
+   # Tests center
+   myB = BHK("../mnist_train_0.csv", "../mnist_test_0.csv")
+   myB.traindata = myB.traindata[20000:25000,:]
+   print np.shape(myB.traindata)
+   myB.compute_all(2,1,200)
+   myB.compute_alpha7(2,1,0,200)
+   print myB.test_alpha(2,1,200)
+   print myB.verify_alpha(2,1,200)
+   myB.center()
+    
 
  
 # This class processes the google stock data
