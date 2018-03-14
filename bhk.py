@@ -531,15 +531,33 @@ class BHKRandomForest:
       print self.myB.shift
       print self.myB.traindata[:10,-1]
       
+   # This function grabs a batch, trains on that batch and
+   # returns the batch indices as well as the alpha and
+   # shift. n is the order of the kernel, c is the constant
+   # term in the polynomial kernel, l is the regularization
+   # constant, and m determines the size of the covariance matrix
+   def trainbatch2(self,n,c,l,m):
+      self.myB = BHK("No Data")
+      # shuffles temparray 
+      np.random.shuffle(self.temptrain)
+      # grabs the first b data instances from temptrain
+      self.myB.traindata = copy.copy(self.temptrain[:self.b,:])
+      self.myB.testdata = self.testdata
+      self.myB.compute_all_final(n,c,m,1)
+      self.myB.compute_alpha7(n,c,l,m)
+      #print self.myB.test_alpha(n,c,m)
+      print self.myB.verify_alpha(n,c,m)
+      self.myB.center()
       
    # This function will be used to aggregate myB.alpha
    # with myRF.alpha as well as the shifts
    def aggregate(self):
       self.T += 1
-      self.alpha *= self.T/(self.T+1.0)
-      self.shift *= self.T/(self.T+1.0)
-      self.myB.alpha *= 1/(self.T+1.0)
-      self.myB.shift *= 1/(self.T+1.0)
+      if self.T != 1:
+         self.alpha *= self.T/(self.T+1.0)
+         self.shift *= self.T/(self.T+1.0)
+         self.myB.alpha *= 1/(self.T+1.0)
+         self.myB.shift *= 1/(self.T+1.0)
       self.shift += self.myB.shift
       for i in range(0,np.size(self.myB.alpha)):
          self.alpha[int(self.myB.traindata[i,-1])] += self.myB.alpha[i]
@@ -572,19 +590,21 @@ class BHKRandomForest:
       self.linear_kernel_mt2(n,c)
       self.h += np.dot(self.alpha[40000:60000],self.mta1)	
       print 3	
-      #self.mt1 = self.traindata[30000:40000,1:]
-      #self.linear_kernel_mt2(n,c)
-      #self.h = np.dot(self.alpha[30000:40000],self.mta1)	
-      #print 4	
-      #self.mt1 = self.traindata[40000:50000,1:]
-      #self.linear_kernel_mt2(n,c)
-      #self.h += np.dot(self.alpha[40000:50000],self.mta1)	
-      #print 5	
-      #self.mt1 = self.traindata[50000:60000,1:]
-      #self.linear_kernel_mt2(n,c)
-      #self.h += np.dot(self.alpha[50000:60000],self.mta1)	
-      #print 6	
       return sklearn.metrics.roc_auc_score(self.testdata[:,0],self.h)
+
+   # runs the random forest for the desired number of trees
+   def runForest(self,numEpochs,n,c,l,m):
+      for i in range(0,numEpochs):
+         self.trainbatch(n,c,l,m)
+         self.aggregate()
+         self.test_alpha(n,c,m)
+   
+   # runs the random forest for the desired number of trees
+   def runForest2(self,numEpochs,n,c,l,m):
+      for i in range(0,numEpochs):
+         self.trainbatch2(n,c,l,m)
+         self.aggregate()
+      print self.test_alpha(n,c,m)
 
    # Returns the roc auc score of current alpha vector on test set        
    #def test_alpha(self,n,c,m):
