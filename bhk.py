@@ -1,3 +1,7 @@
+# Todo: We need to ensure we are not removing instances
+# of just 1 class when removing m datapoints from
+# the covariance computation
+
 from sklearn import svm
 import sklearn
 import numpy as np
@@ -18,7 +22,11 @@ class BHK:
            numi = 0
            for i in arg:
               if numi == 1:
-                 self.train = i
+                 if i == "No Data":
+                    self.train = "";
+                    self.test = "";
+                 else :
+                    self.train = i
               if numi == 2:
                  self.test = i
               if numi == 3:
@@ -31,21 +39,22 @@ class BHK:
                  # polynomial kernel
                  self.kernel = np.zeros(i)
               numi += 1
-           self.testd = (pd.read_csv(self.test,sep=',',header=None)).values
-           self.traind = (pd.read_csv(self.train,sep=',',header=None)).values
-           self.traindata = np.ones((np.shape(self.traind)[0],np.shape(self.traind)[1]))
-           self.testdata = np.ones((np.shape(self.testd)[0],np.shape(self.testd)[1]))
-           self.testdata[:,:] = self.testd
-           self.traindata[:,:] = self.traind
-           #self.testdata[:,1:] = self.testdata[:,1:]/255.0
-           #self.traindata[:,1:] = self.traindata[:,1:]/255.0
-           self.mags = np.zeros(np.shape(self.traindata)[0]) 
-           index = 0 
-           for i in self.traindata:
-              self.mags[index] = np.dot(i,i)
-           self.ave = np.sum(self.mags)/np.size(self.mags)
-           self.traindata[:,1:] = self.traindata[:,1:]/self.ave
-           self.testdata[:,1:] = self.testdata[:,1:]/self.ave
+           if self.train != "":
+              self.testd = (pd.read_csv(self.test,sep=',',header=None)).values
+              self.traind = (pd.read_csv(self.train,sep=',',header=None)).values
+              self.traindata = np.ones((np.shape(self.traind)[0],np.shape(self.traind)[1]))
+              self.testdata = np.ones((np.shape(self.testd)[0],np.shape(self.testd)[1]))
+              self.testdata[:,:] = self.testd
+              self.traindata[:,:] = self.traind
+              #self.testdata[:,1:] = self.testdata[:,1:]/255.0
+              #self.traindata[:,1:] = self.traindata[:,1:]/255.0
+              self.mags = np.zeros(np.shape(self.traindata)[0]) 
+              index = 0 
+              for i in self.traindata:
+                 self.mags[index] = np.dot(i,i)
+              self.ave = np.sum(self.mags)/np.size(self.mags)
+              self.traindata[:,1:] = self.traindata[:,1:]/self.ave
+              self.testdata[:,1:] = self.testdata[:,1:]/self.ave
           
      
         ###############################################################################################
@@ -123,7 +132,6 @@ class BHK:
            # multiplications
            self.posnum = int(np.sum(self.traindata[:self.n,0])) 
            self.negnum = self.n - self.posnum
-           print self.posnum 
            gc.collect()
            self.kplus = (1.0/self.posnum)*(self.traintemp[self.negnum:,:-2-m]).sum(axis = 0)
            self.kminus = (1.0/self.negnum)*(self.traintemp[:self.negnum,:-2-m]).sum(axis = 0)
@@ -172,15 +180,33 @@ class BHK:
            print np.shape(self.traintemp[:self.negnum,:])
            print np.shape(self.traintemp[self.negnum:,:])
         
-        
         # Computes kplus and kminus all training, as well as the covariance matrix
-        def compute_all_final(self,n,c,m):
+        def compute_all_final(*arg): 
+           self = arg[0]
+           n = 2
+           c = 1
+           m = 800
+           isRandForest = 0
+           numi = 0 
+           for i in arg:
+              if numi == 1:
+                 n = i
+              if numi == 2:
+                 c = i
+              if numi == 3:
+                 m = i
+              if numi == 4:
+                 isRandForest = i
+              numi += 1
            # we want it to concatenate
            self.n = (np.shape(self.traindata)[0]);
            self.traintrain = self.traindata[:self.n,:]
            self.traintrain = self.traintrain[np.lexsort(np.fliplr(self.traintrain).T)]
            self.traindata[:self.n,:] = self.traintrain[:,:]
-           self.traintrain = self.traintrain[:,1:]
+           if isRandForest != 0:
+              self.traintrain = self.traintrain[:,1:-1]
+           else :
+              self.traintrain = self.traintrain[:,1:]
            self.testtest = self.testdata[:,1:]
            self.mt1 = self.traintrain
            self.mt2 = self.traintrain.T
@@ -197,6 +223,7 @@ class BHK:
            self.negnum = self.n - self.posnum
            print self.posnum 
            gc.collect()
+           print self.negnum
            self.kplus = (1.0/self.posnum)*(self.traintemp[self.negnum:,:-2-m]).sum(axis = 0)
            self.kminus = (1.0/self.negnum)*(self.traintemp[:self.negnum,:-2-m]).sum(axis = 0)
            print np.shape(self.kplus)
@@ -253,13 +280,13 @@ class BHK:
            tempNegMean += tempDiff
            print tempPosMean
            print tempNegMean 
-           self.alpha += tempDiff
+           self.shift = tempDiff
 
         # Returns the roc auc score of current alpha vector on test set        
         def test_alpha(self,n,c,m):    
            self.mt1 = self.traintrain[:-2-m,:]
            self.mt2 = (self.testtest[:,:]).T
-           self.angle_kernel_mt2(n,c)
+           self.linear_kernel_mt2(n,c)
            self.h = np.dot(self.alpha,self.mta1)	
 	   return sklearn.metrics.roc_auc_score(self.testdata[:,0],self.h)
         
@@ -419,6 +446,160 @@ class BHK:
            self.linear_kernel_mt1(n,c)
            self.yhatans = np.dot(self.alpha,self.veca1)
            return self.yhatans
+
+# This class will implement the random forest
+# of BHK classifiers
+class BHKRandomForest:
+   # It has the same constructor as bhk 
+   def __init__(*arg):
+      self = arg[0]
+      self.train = '../mnist_train_0.csv'
+      self.test = '../mnist_test_0.csv'
+      numi = 0
+      # This will store the epoch number
+      self.T = 0
+      # It will have a batch size constant
+      self.b = 5000
+      # along with the batch, it will have the indexes
+      # of the instances in the batch
+      self.bArray = np.zeros(5000)
+      for i in arg:
+         if numi == 1:
+            self.train = i
+         if numi == 2:
+            self.test = i
+         if numi == 3:
+            self.b = i
+            self.bArray = np.zeros(i)
+         if numi == 4:
+            self.eta = i
+         if numi == 5:
+            # not used?
+            self.l = i
+         if numi == 6:
+            # will be used to make the arbitrary
+            # polynomial kernel
+            self.kernel = np.zeros(i)
+         numi += 1
+      if self.train != "":
+         self.testd = (pd.read_csv(self.test,sep=',',header=None)).values
+         self.traind = (pd.read_csv(self.train,sep=',',header=None)).values
+         self.traindata = np.ones((np.shape(self.traind)[0],np.shape(self.traind)[1]))
+         self.testdata = np.ones((np.shape(self.testd)[0],np.shape(self.testd)[1]))
+         self.testdata[:,:] = self.testd
+         self.traindata[:,:] = self.traind
+         #self.testdata[:,1:] = self.testdata[:,1:]/255.0
+         #self.traindata[:,1:] = self.traindata[:,1:]/255.0
+         self.mags = np.zeros(np.shape(self.traindata)[0]) 
+         index = 0 
+         for i in self.traindata:
+            self.mags[index] = np.dot(i,i)
+         self.ave = np.sum(self.mags)/np.size(self.mags)
+         self.traindata[:,1:] = self.traindata[:,1:]/self.ave
+         self.testdata[:,1:] = self.testdata[:,1:]/self.ave
+         # It will also have an n dimensional alpha vector
+         # where n is the number of training points
+         self.alpha = np.zeros(np.shape(self.traindata)[0])
+         # and it will have a shift constant
+         self.shift = 0
+         # Here we define an array that will be used in tandem
+         # with the train array. It is not necessary to define
+         # this array seperately from the traindata array but
+         # it is quickest to implement this way
+         self.temptrain = np.zeros([np.shape(self.traindata)[0],np.shape(self.traindata)[1]+1])
+         self.temptrain[:,:-1] = copy.copy(self.traindata)
+         self.temptrain[:,-1] = range(0,np.shape(self.traindata)[0])
+      
+   # This function grabs a batch, trains on that batch and
+   # returns the batch indices as well as the alpha and
+   # shift. n is the order of the kernel, c is the constant
+   # term in the polynomial kernel, l is the regularization
+   # constant, and m determines the size of the covariance matrix
+   def trainbatch(self,n,c,l,m):
+      self.myB = BHK("No Data")
+      # shuffles temparray 
+      np.random.shuffle(self.temptrain)
+      # grabs the first b data instances from temptrain
+      self.myB.traindata = copy.copy(self.temptrain[:self.b,:])
+      self.myB.testdata = self.testdata
+      print self.myB.traindata[:10,-1]
+      self.myB.compute_all_final(n,c,m,1)
+      self.myB.compute_alpha7(n,c,l,m)
+      print self.myB.test_alpha(n,c,m)
+      print self.myB.verify_alpha(n,c,m)
+      self.myB.center()
+      print self.myB.shift
+      print self.myB.traindata[:10,-1]
+      
+      
+   # This function will be used to aggregate myB.alpha
+   # with myRF.alpha as well as the shifts
+   def aggregate(self):
+      self.T += 1
+      self.alpha *= self.T/(self.T+1.0)
+      self.shift *= self.T/(self.T+1.0)
+      self.myB.alpha *= 1/(self.T+1.0)
+      self.myB.shift *= 1/(self.T+1.0)
+      self.shift += self.myB.shift
+      for i in range(0,np.size(self.myB.alpha)):
+         self.alpha[int(self.myB.traindata[i,-1])] += self.myB.alpha[i]
+
+   # computes the linear kernel between 2 vectors stored in vec1 and vec2
+   def linear_kernel_vec(self,n,c):
+      self.a1 = ((np.dot(self.vec1,self.vec1)+c)**n)
+   # Computes the  polynomial kernel of the vector stored in self.vec1 with every vector stored in
+   # self.mt1 and stores the resulting vector into self.veca1
+   def linear_kernel_mt1(self,n,c):
+      self.veca1 = ((np.dot(self.mt1,self.vec1)+c)**n)
+   # Computes the polynomial kernel of every vector stored in self.mt2 with every vector stored in
+   # self.mt1 and stores the resulting matrix into self.mta1
+   def linear_kernel_mt2(self,n,c):
+      self.mta1 = ((np.dot(self.mt1,self.mt2)+c)**n)
+   
+   # Returns the roc auc score of current alpha vector on test set
+   # breaks up a large matrix multiplication into byte size chunks        
+   def test_alpha(self,n,c,m):    
+      self.mt1 = self.traindata[:20000,1:]
+      self.mt2 = (self.testdata[:,1:]).T
+      self.linear_kernel_mt2(n,c)
+      self.h = np.dot(self.alpha[:20000],self.mta1)
+      print 1	
+      self.mt1 = self.traindata[20000:40000,1:]
+      self.linear_kernel_mt2(n,c)
+      self.h += np.dot(self.alpha[20000:40000],self.mta1)	
+      print 2	
+      self.mt1 = self.traindata[40000:60000,1:]
+      self.linear_kernel_mt2(n,c)
+      self.h += np.dot(self.alpha[40000:60000],self.mta1)	
+      print 3	
+      #self.mt1 = self.traindata[30000:40000,1:]
+      #self.linear_kernel_mt2(n,c)
+      #self.h = np.dot(self.alpha[30000:40000],self.mta1)	
+      #print 4	
+      #self.mt1 = self.traindata[40000:50000,1:]
+      #self.linear_kernel_mt2(n,c)
+      #self.h += np.dot(self.alpha[40000:50000],self.mta1)	
+      #print 5	
+      #self.mt1 = self.traindata[50000:60000,1:]
+      #self.linear_kernel_mt2(n,c)
+      #self.h += np.dot(self.alpha[50000:60000],self.mta1)	
+      #print 6	
+      return sklearn.metrics.roc_auc_score(self.testdata[:,0],self.h)
+
+   # Returns the roc auc score of current alpha vector on test set        
+   #def test_alpha(self,n,c,m):
+   #   self.h = np.zeros(np.shape(self.testdata)[0])    
+   #   for i in range(0,np.shape(self.testdata)[0]):
+   #      if self.alpha[i] != 0:
+   #         self.vec2 = self.testdata[i,1:]
+   #         for j in range(0,np.shape(self.traindata)[0]):
+   #            self.vec1 = self.traindata[j,1:-1]
+   #            self.linear_kernel_vec(2,1)
+   #            self.h[i] += self.a1
+   #   return sklearn.metrics.roc_auc_score(self.testdata[:,0],self.h)
+         
+      
+   
 
 # This function tests to ensure that
 # all the functionality is working
