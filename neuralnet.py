@@ -1551,9 +1551,9 @@ def tempstuff():
 # that is exactly the same as mnist_train.csv except the expected
 # value of each row is one if the row is num, and zero otherwise. 
 def create_mnist_binary_train(num):
-   with open('mnist_train.csv') as csvfile:
+   with open('../mnist_train.csv') as csvfile:
       trainreader = csv.reader(csvfile, delimiter=',', quotechar='|')
-      csvwrite = open('mnist_train_'+str(num)+'.csv','w');
+      csvwrite = open('../mnist_train_'+str(num)+'.csv','w');
       csvwriter = csv.writer(csvwrite,delimiter=',',quotechar="|",quoting=csv.QUOTE_MINIMAL)
       for row in trainreader:
          if int(row[0]) == num:
@@ -1567,9 +1567,9 @@ def create_mnist_binary_train(num):
 # that is exactly the same as mnist_train.csv except the expected
 # value of each row is one if the row is num, and zero otherwise. 
 def create_mnist_binary_minitrain(num):
-   with open('mnist_train.csv') as csvfile:
+   with open('../mnist_train.csv') as csvfile:
       trainreader = csv.reader(csvfile, delimiter=',', quotechar='|')
-      csvwrite = open('mnist_minitrain_'+str(num)+'.csv','w');
+      csvwrite = open('../mnist_minitrain_'+str(num)+'.csv','w');
       csvwriter = csv.writer(csvwrite,delimiter=',',quotechar="|",quoting=csv.QUOTE_MINIMAL)
       num = 6000; 
       for row in trainreader:
@@ -1587,9 +1587,9 @@ def create_mnist_binary_minitrain(num):
 # that is exactly the same as mnist_test.csv except the expected
 # value of each row is one if the row is num, and zero otherwise. 
 def create_mnist_binary_test(num):
-   with open('mnist_test.csv') as csvfile:
+   with open('../mnist_test.csv') as csvfile:
       trainreader = csv.reader(csvfile, delimiter=',', quotechar='|')
-      csvwrite = open('mnist_test_'+str(num)+'.csv','w');
+      csvwrite = open('../mnist_test_'+str(num)+'.csv','w');
       csvwriter = csv.writer(csvwrite,delimiter=',',quotechar="|",quoting=csv.QUOTE_MINIMAL)
       for row in trainreader:
          if int(row[0]) == num:
