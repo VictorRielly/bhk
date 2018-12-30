@@ -1,3 +1,7 @@
+# This is the script used to compare
+# svm to roc optimization if an error 
+# exitsts it would probably live somewhere
+# in here.
 import bhk
 import numpy as np
 import scipy
