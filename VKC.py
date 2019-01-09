@@ -8,10 +8,13 @@ import time
 import math
 import scipy
 from sklearn.svm import LinearSVC
+f = open("output.txt","w+");
+f2 = open("output2.txt","w+");
 #from sklearn.linear_model import logisticRegression as lr
 #from sklearn.linear_model import logisticRegressionCV as lrc
 #print sk.linear_model;
 # seed the random number generator
+print "test";
 np.random.seed()
 class AUC:
    #########################################################
@@ -357,3 +360,54 @@ def ridgecv_test(myTest):
     myTest.comp_svd();
     myTest.comp_kern_alph_ridgecv();
     return myTest.eval_on_test_ridgecv()
+
+# The main test code
+def main_driver():
+   # First, we need to find the appropriate value for c
+   print 1;
+   myTest = AUC();
+   print 2;
+   temp = copy.copy(myTest.traindata);
+   print 3; 
+   myTest.traindata = temp[:1500,:]
+   print 4; 
+   myTest.testdata = temp[10000:20000,:]
+   print 5; 
+   for i in range(-10,10):
+      myTest.c = 2**(i)
+      myTest.comp_k()
+      myTest.comp_svd()
+      myTest.comp_kern_alph_ridgecv();
+      mynum = myTest.eval_on_test_ridgecv();
+      print mynum;
+      f.write(str(mynum)+"\n");
+      f.write(str(i)+"\n");
+      f.write(str(2**(i))+"\n");
+   f.close();
+
+# The main test code
+def main_driver2():
+   # First, we need to find the appropriate value for c
+   print 1;
+   myTest = AUC();
+   print 2;
+   temp = copy.copy(myTest.traindata);
+   print 3; 
+   myTest.traindata = temp[:1500,:]
+   print 4; 
+   myTest.testdata = temp[10000:20000,:]
+   print 5; 
+   for i in range(-10,10):
+      myTest.c = 2**(i)
+      myTest.comp_k()
+      myTest.comp_svd()
+      myTest.comp_kern_alph_ridgecv();
+      mynum = myTest.eval_on_test_ridgecv();
+      print mynum;
+      f2.write(str(mynum)+"\n");
+      f2.write(str(i)+"\n");
+      f2.write(str(2**(i))+"\n");
+   f2.close();
+
+main_driver()
+main_driver2()
